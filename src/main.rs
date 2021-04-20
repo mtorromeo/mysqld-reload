@@ -137,8 +137,8 @@ fn main() -> DynResult<()> {
                 {
                     myopts = myopts.user(Some(user));
                 }
-                if let Some(Some(user)) = options.get("password") {
-                    myopts = myopts.pass(Some(user));
+                if let Some(Some(pass)) = options.get("password") {
+                    myopts = myopts.pass(Some(pass));
                 }
             }
         }
