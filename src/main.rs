@@ -12,22 +12,13 @@ use std::{collections::HashMap, path::Path};
 use structopt::StructOpt;
 use users::get_current_username;
 
+#[derive(Debug)]
 struct Variable {
     name: String,
     value: String,
 }
 
 impl Variable {
-    fn is_bool(&self) -> bool {
-        let upper = self.value.to_uppercase();
-        upper == "ON" || upper == "YES" || upper == "OFF" || upper == "NO"
-    }
-
-    fn as_bool(&self) -> bool {
-        let upper = self.value.to_uppercase();
-        upper == "ON" || upper == "YES"
-    }
-
     fn definition(&self) -> Option<&VariableDefinition> {
         match MYSQL_SYSTEM_VARIABLES.binary_search_by(|v| v.name.cmp(self.name.as_str())) {
             Ok(pos) => Some(&MYSQL_SYSTEM_VARIABLES[pos]),
@@ -67,6 +58,14 @@ fn normalize_conf(config: &HashMap<String, Option<String>>) -> HashMap<String, S
     for (k, v) in config.iter() {
         let mut normalized_k = k.to_lowercase().replace("-", "_");
         let mut v = v.clone().unwrap_or_else(|| "ON".to_string());
+
+        // unquote strings
+        let first_char = &v[0..1];
+        if v.len() > 1 && v.ends_with(first_char) && (first_char == "'" || first_char == "\"") {
+            v.remove(0);
+            v.remove(v.len() - 1);
+        }
+
         if normalized_k.starts_with("skip_") {
             normalized_k = normalized_k.replacen("skip_", "", 1);
             v = "OFF".to_string();
@@ -143,21 +142,12 @@ fn main() -> DynResult<()> {
     })?;
 
     for variable in mysqld_variables.iter() {
-        if let Some(_definition) = variable.definition() {
+        if let Some(definition) = variable.definition() {
             if let Some(option) = config.get(&variable.name) {
-                if variable.is_bool() {
-                    let v = option.to_uppercase();
-                    let v = v == "YES" || v == "ON" || v == "1";
-                    if v != variable.as_bool() {
-                        mysql_set_var(
-                            &mut conn,
-                            &variable.name,
-                            if v { "ON" } else { "OFF" },
-                            opts.verbose,
-                            opts.dry_run,
-                        )?;
-                    }
-                } else if &variable.value != option {
+                if !definition.same(option, &variable.value) {
+                    // if opts.verbose {
+                    //     println!("{:?} -> {:?}", variable, definition.vartype);
+                    // }
                     mysql_set_var(
                         &mut conn,
                         &variable.name,
