@@ -9,6 +9,7 @@ use std::io::Read;
 use std::{collections::HashMap, path::Path, path::PathBuf};
 use structopt::clap::AppSettings;
 use structopt::StructOpt;
+use users::get_current_username;
 
 #[derive(Debug, StructOpt)]
 #[structopt(global_settings(&[AppSettings::ColoredHelp]), author, about)]
@@ -129,7 +130,11 @@ fn main() -> DynResult<()> {
         let client_sections = ["mysql", "client"];
         for section in &client_sections {
             if let Some(options) = mycnf.get(&section.to_string()) {
-                if let Some(Some(user)) = options.get("user") {
+                if let Some(user) = options
+                    .get("user")
+                    .and_then(|u| u.clone())
+                    .or_else(|| get_current_username().and_then(|u| u.into_string().ok()))
+                {
                     myopts = myopts.user(Some(user));
                 }
                 if let Some(Some(user)) = options.get("password") {
