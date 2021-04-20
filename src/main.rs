@@ -83,23 +83,39 @@ fn mysql_set_var(
     conn: &mut mysql::Conn,
     name: &str,
     value: &str,
+    definition: &VariableDefinition,
     verbose: bool,
     dry_run: bool,
 ) -> Result<(), mysql::Error> {
     let name = mysql_escape_identifier(name);
-    let stmt = format!("SET GLOBAL {} = :value;", name);
+
+    let quote_value = !matches!(
+        definition.vartype,
+        mysql_variables::VariableType::Boolean
+            | mysql_variables::VariableType::Integer
+            | mysql_variables::VariableType::Numeric
+    );
+    let stmt = format!(
+        "SET GLOBAL {} = {};",
+        name,
+        if quote_value { ":value" } else { value }
+    );
 
     if verbose {
         println!("{}", stmt.replacen(":value", value, 1));
     }
 
     if !dry_run {
-        let _: Vec<String> = conn.exec(
-            stmt,
-            params! {
-                "value" => value,
-            },
-        )?;
+        let _: Vec<String> = if quote_value {
+            conn.exec(
+                stmt,
+                params! {
+                    "value" => value,
+                },
+            )?
+        } else {
+            conn.query(stmt)?
+        };
     }
 
     Ok(())
@@ -144,14 +160,15 @@ fn main() -> DynResult<()> {
     for variable in mysqld_variables.iter() {
         if let Some(definition) = variable.definition() {
             if let Some(option) = config.get(&variable.name) {
-                if !definition.same(option, &variable.value) {
+                if let Some(new_normalized) = definition.same(option, &variable.value) {
                     // if opts.verbose {
                     //     println!("{:?} -> {:?}", variable, definition.vartype);
                     // }
                     mysql_set_var(
                         &mut conn,
                         &variable.name,
-                        option,
+                        &new_normalized,
+                        definition,
                         opts.verbose,
                         opts.dry_run,
                     )?;

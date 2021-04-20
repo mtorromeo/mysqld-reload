@@ -30,7 +30,9 @@ impl VariableDefinition {
         };
 
         match self.vartype {
-            VariableType::Boolean if value == "YES" || value == "1" => "ON".to_owned(),
+            VariableType::Boolean if value == "YES" || value == "TRUE" || value == "1" => {
+                "ON".to_owned()
+            }
             VariableType::Boolean if value == "ON" => value,
             VariableType::Boolean => "OFF".to_owned(),
             VariableType::Integer if !value.is_empty() => {
@@ -47,10 +49,14 @@ impl VariableDefinition {
         }
     }
 
-    pub fn same(&self, a: &str, b: &str) -> bool {
-        let a = self.normalize(a);
-        let b = self.normalize(b);
-        a == b
+    pub fn same(&self, new: &str, current: &str) -> Option<String> {
+        let new = self.normalize(new);
+        let current = self.normalize(current);
+        if new == current {
+            None
+        } else {
+            Some(new)
+        }
     }
 }
 
