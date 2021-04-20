@@ -1,2 +1,9 @@
+/pkg
 /target
 *.html
+*~
+*.tar.*
+*.rpm
+*.deb
+.*
+!.git*
