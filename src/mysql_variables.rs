@@ -20,7 +20,7 @@ const SIZE_SUFFIXES: [&str; 6] = ["K", "M", "G", "T", "P", "E"];
 
 impl VariableDefinition {
     fn normalize(&self, value: &str) -> String {
-        let mut value = match self.vartype {
+        let value = match self.vartype {
             VariableType::Boolean
             | VariableType::Integer
             | VariableType::Numeric
@@ -29,11 +29,11 @@ impl VariableDefinition {
             _ => value.to_owned(),
         };
 
-        value = match self.vartype {
+        match self.vartype {
             VariableType::Boolean if value == "YES" || value == "1" => "ON".to_owned(),
             VariableType::Boolean if value == "ON" => value,
             VariableType::Boolean => "OFF".to_owned(),
-            VariableType::Integer if value.len() > 0 => {
+            VariableType::Integer if !value.is_empty() => {
                 let suffix = &value[value.len() - 1..value.len()];
                 match SIZE_SUFFIXES.iter().position(|&x| x == suffix) {
                     Some(pos) => match &value[0..value.len() - 1].parse::<i32>() {
@@ -44,9 +44,7 @@ impl VariableDefinition {
                 }
             }
             _ => value,
-        };
-
-        value
+        }
     }
 
     pub fn same(&self, a: &str, b: &str) -> bool {
