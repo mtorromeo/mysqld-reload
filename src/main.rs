@@ -1,31 +1,16 @@
+mod cli;
 mod dynamic_system_variables;
 
+use cli::Opts;
 use configparser::ini::Ini;
 use dynamic_system_variables::DYNAMIC_SYSTEM_VARIABLES;
 use mysql::params;
 use mysql::prelude::*;
 use std::fs::File;
 use std::io::Read;
-use std::{collections::HashMap, path::Path, path::PathBuf};
-use structopt::clap::AppSettings;
+use std::{collections::HashMap, path::Path};
 use structopt::StructOpt;
 use users::get_current_username;
-
-#[derive(Debug, StructOpt)]
-#[structopt(global_settings(&[AppSettings::ColoredHelp]), author, about)]
-struct Opts {
-    /// MySQL server configuration file
-    #[structopt(short, long, default_value = "/etc/my.cnf")]
-    cnf: PathBuf,
-
-    /// Print the SQL statements to stdout
-    #[structopt(short, long)]
-    verbose: bool,
-
-    /// Do not apply values
-    #[structopt(short, long)]
-    dry_run: bool,
-}
 
 struct Variable {
     name: String,
