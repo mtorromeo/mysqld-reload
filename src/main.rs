@@ -1,11 +1,11 @@
 mod cli;
-mod dynamic_system_variables;
+mod mysql_variables;
 
 use cli::Opts;
 use configparser::ini::Ini;
-use dynamic_system_variables::DYNAMIC_SYSTEM_VARIABLES;
 use mysql::params;
 use mysql::prelude::*;
+use mysql_variables::{VariableDefinition, MYSQL_SYSTEM_VARIABLES};
 use std::fs::File;
 use std::io::Read;
 use std::{collections::HashMap, path::Path};
@@ -26,6 +26,13 @@ impl Variable {
     fn as_bool(&self) -> bool {
         let upper = self.value.to_uppercase();
         upper == "ON" || upper == "YES"
+    }
+
+    fn definition(&self) -> Option<&VariableDefinition> {
+        match MYSQL_SYSTEM_VARIABLES.binary_search_by(|v| v.name.cmp(self.name.as_str())) {
+            Ok(pos) => Some(&MYSQL_SYSTEM_VARIABLES[pos]),
+            Err(_) => None,
+        }
     }
 }
 
@@ -136,10 +143,7 @@ fn main() -> DynResult<()> {
     })?;
 
     for variable in mysqld_variables.iter() {
-        if DYNAMIC_SYSTEM_VARIABLES
-            .binary_search_by(|v| (*v).cmp(variable.name.as_str()))
-            .is_ok()
-        {
+        if let Some(_definition) = variable.definition() {
             if let Some(option) = config.get(&variable.name) {
                 if variable.is_bool() {
                     let v = option.to_uppercase();

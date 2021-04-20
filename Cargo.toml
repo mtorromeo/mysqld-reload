@@ -5,8 +5,6 @@ authors = ["Massimiliano Torromeo <massimiliano.torromeo@gmail.com>"]
 edition = "2018"
 description = "Reads the MySQL configuration files and applies the configured variables at runtime when their values don't match."
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 configparser = "2.0.1"
 dirs = "3.0.1"
@@ -16,3 +14,4 @@ users = "0.11.0"
 
 [build-dependencies]
 structopt = "0.3.21"
+scraper = "0.12.0"
