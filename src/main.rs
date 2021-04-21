@@ -5,7 +5,7 @@ use cli::Opts;
 use configparser::ini::Ini;
 use mysql::params;
 use mysql::prelude::*;
-use mysql_variables::{VariableDefinition, MYSQL_SYSTEM_VARIABLES};
+use mysql_variables::VariableDefinition;
 use std::fs::File;
 use std::io::Read;
 use std::{collections::HashMap, path::Path};
@@ -20,10 +20,7 @@ struct Variable {
 
 impl Variable {
     fn definition(&self) -> Option<&VariableDefinition> {
-        match MYSQL_SYSTEM_VARIABLES.binary_search_by(|v| v.name.cmp(self.name.as_str())) {
-            Ok(pos) => Some(&MYSQL_SYSTEM_VARIABLES[pos]),
-            Err(_) => None,
-        }
+        VariableDefinition::get(&self.name)
     }
 }
 

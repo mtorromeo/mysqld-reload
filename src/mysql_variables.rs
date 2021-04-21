@@ -19,6 +19,13 @@ pub enum VariableType {
 const SIZE_SUFFIXES: [&str; 6] = ["K", "M", "G", "T", "P", "E"];
 
 impl VariableDefinition {
+    pub fn get(name: &str) -> Option<&Self> {
+        match MYSQL_SYSTEM_VARIABLES.binary_search_by(|v| v.name.cmp(name)) {
+            Ok(pos) => Some(&MYSQL_SYSTEM_VARIABLES[pos]),
+            Err(_) => None,
+        }
+    }
+
     fn normalize(&self, value: &str) -> String {
         let value = match self.vartype {
             VariableType::Boolean
@@ -61,3 +68,17 @@ impl VariableDefinition {
 }
 
 include!(concat!(env!("OUT_DIR"), "/mysql_system_vardef.rs"));
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_get() {
+        let v = VariableDefinition::get("sql_mode");
+        assert!(v.is_some());
+
+        let v = VariableDefinition::get("sql_mode_2");
+        assert!(v.is_none());
+    }
+}
