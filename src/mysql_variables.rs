@@ -16,6 +16,7 @@ pub enum VariableType {
     Directory,
     Enum,
     Set,
+    Bitmap,
 }
 
 const SIZE_SUFFIXES: [&str; 6] = ["K", "M", "G", "T", "P", "E"];

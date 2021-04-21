@@ -1,6 +1,8 @@
 use scraper::{ElementRef, Html, Selector};
 use std::{convert::TryFrom, env, fs, io::Write, path::Path};
 use structopt::clap::Shell;
+use std::collections::HashSet;
+use std::hash::{Hash, Hasher};
 
 include!("src/cli.rs");
 
@@ -19,6 +21,20 @@ impl VariableDefinition {
     }}"#,
             self.name, self.vartype
         )
+    }
+}
+
+impl PartialEq for VariableDefinition {
+    fn eq(&self, other: &Self) -> bool {
+        self.name.eq(&other.name)
+    }
+}
+
+impl Eq for VariableDefinition {}
+
+impl Hash for VariableDefinition {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
     }
 }
 
@@ -70,6 +86,7 @@ enum VariableType {
     Directory,
     Enum,
     Set,
+    Bitmap,
 }
 
 impl<'a> TryFrom<&'a str> for VariableType {
@@ -85,6 +102,7 @@ impl<'a> TryFrom<&'a str> for VariableType {
             "Directory name" => Ok(VariableType::Directory),
             "Set" => Ok(VariableType::Set),
             "Enumeration" => Ok(VariableType::Enum),
+            "Bitmap" => Ok(VariableType::Bitmap),
             t => Err(format!("Unrecognized type: {}", t)),
         }
     }
@@ -97,15 +115,32 @@ fn main() {
     };
     let vardef_path = Path::new(&outdir).join("mysql_system_vardef.rs");
     let mut vardef_file = fs::File::create(&vardef_path).unwrap();
-    let mut vardefs = Vec::new();
+    let mut vardefs = HashSet::new();
 
     let informal_tables_sel =
         Selector::parse("li.listitem > div.informaltable > table > tbody").unwrap();
 
     for html in &[
-        "server-system-variables.html",
+        "audit-log-reference.html",
+        "clone-plugin-options-variables.html",
+        "connection-control-variables.html",
+        "innodb-parameters.html",
+        "keyring-system-variables.html",
+        "mysql-cluster-options-variables.html",
+        "performance-schema-system-variables.html",
+        "pluggable-authentication-system-variables.html",
         "replication-options-binary-log.html",
+        "replication-options-gtids.html",
+        "replication-options-reference.html",
+        "replication-options-replica.html",
+        "replication-options-source.html",
+        "replication-options.html",
+        "server-system-variables.html",
+        "validate-password-options-variables.html",
+        "x-plugin-options-system-variables.html",
+        "server-administration.html",
     ] {
+        let html = format!("mysqldocs/{}", html);
         println!("cargo:rerun-if-changed={}", html);
 
         let contents = fs::read_to_string(html).unwrap();
@@ -113,12 +148,15 @@ fn main() {
 
         vardefs.extend(
             document
-                .select(&informal_tables_sel)
-                .filter_map(|e| VariableDefinition::try_from(e).ok()),
+                    .select(&informal_tables_sel)
+                    .filter_map(|e| VariableDefinition::try_from(e).ok()),
         );
     }
 
+    // sort the variable set in a vec
+    let mut vardefs: Vec<_> = vardefs.iter().collect();
     vardefs.sort_by(|a, b| a.name.cmp(&b.name));
+
     vardef_file
         .write_all(
             format!(
