@@ -55,19 +55,17 @@ impl VariableDefinition {
                     _ => value,
                 }
             }
-            VariableType::Numeric if !value.is_empty() => {
-                match value.parse::<f32>() {
-                    Ok(fvalue) => format!("{}", fvalue),
-                    _ => value,
-                }
-            }
+            VariableType::Numeric if !value.is_empty() => match value.parse::<f32>() {
+                Ok(fvalue) => format!("{}", fvalue),
+                _ => value,
+            },
             VariableType::Set => {
                 let set: HashSet<_> = value.split_terminator(',').map(|s| s.trim()).collect();
                 let mut v: Vec<_> = set.into_iter().collect();
                 v.sort_unstable();
                 v.join(",")
             }
-            _ => value
+            _ => value,
         }
     }
 
@@ -130,8 +128,14 @@ mod test {
         assert!(matches!(v.vartype, VariableType::Set));
         assert_eq!("ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES", v.normalize("ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"));
         assert_eq!("ONLY_FULL_GROUP_BY", v.normalize("only_full_group_by"));
-        assert_eq!("ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES", v.normalize("ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,STRICT_TRANS_TABLES"));
-        assert_eq!("ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES", v.normalize("ONLY_FULL_GROUP_BY, STRICT_TRANS_TABLES , STRICT_TRANS_TABLES "));
+        assert_eq!(
+            "ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES",
+            v.normalize("ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,STRICT_TRANS_TABLES")
+        );
+        assert_eq!(
+            "ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES",
+            v.normalize("ONLY_FULL_GROUP_BY, STRICT_TRANS_TABLES , STRICT_TRANS_TABLES ")
+        );
         assert_eq!("", v.normalize(""));
     }
 }

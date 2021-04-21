@@ -1,8 +1,8 @@
 use scraper::{ElementRef, Html, Selector};
-use std::{convert::TryFrom, env, fs, io::Write, path::Path};
-use structopt::clap::Shell;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
+use std::{convert::TryFrom, env, fs, io::Write, path::Path};
+use structopt::clap::Shell;
 
 include!("src/cli.rs");
 
@@ -148,8 +148,8 @@ fn main() {
 
         vardefs.extend(
             document
-                    .select(&informal_tables_sel)
-                    .filter_map(|e| VariableDefinition::try_from(e).ok()),
+                .select(&informal_tables_sel)
+                .filter_map(|e| VariableDefinition::try_from(e).ok()),
         );
     }
 
