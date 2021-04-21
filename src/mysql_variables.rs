@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 #[derive(Debug)]
 pub struct VariableDefinition {
     pub name: &'static str,
@@ -52,7 +54,13 @@ impl VariableDefinition {
                     _ => value,
                 }
             }
-            _ => value,
+            VariableType::Set => {
+                let set: HashSet<_> = value.split_terminator(',').map(|s| s.trim()).collect();
+                let mut v: Vec<_> = set.into_iter().collect();
+                v.sort_unstable();
+                v.join(",")
+            }
+            _ => value
         }
     }
 
@@ -80,5 +88,35 @@ mod test {
 
         let v = VariableDefinition::get("sql_mode_2");
         assert!(v.is_none());
+    }
+
+    #[test]
+    fn test_normalize_integer() {
+        let v = VariableDefinition::get("tmp_table_size").unwrap();
+        assert!(matches!(v.vartype, VariableType::Integer));
+        assert_eq!("16777216", v.normalize("16M"));
+    }
+
+    #[test]
+    fn test_normalize_bool() {
+        let v = VariableDefinition::get("autocommit").unwrap();
+        assert!(matches!(v.vartype, VariableType::Boolean));
+        assert_eq!("ON", v.normalize("on"));
+        assert_eq!("ON", v.normalize("1"));
+        assert_eq!("ON", v.normalize("true"));
+        assert_eq!("OFF", v.normalize("0"));
+        assert_eq!("OFF", v.normalize("x"));
+        assert_eq!("OFF", v.normalize("off"));
+    }
+
+    #[test]
+    fn test_normalize_set() {
+        let v = VariableDefinition::get("sql_mode").unwrap();
+        assert!(matches!(v.vartype, VariableType::Set));
+        assert_eq!("ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION,NO_ZERO_DATE,NO_ZERO_IN_DATE,ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES", v.normalize("ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION"));
+        assert_eq!("ONLY_FULL_GROUP_BY", v.normalize("only_full_group_by"));
+        assert_eq!("ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES", v.normalize("ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,STRICT_TRANS_TABLES"));
+        assert_eq!("ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES", v.normalize("ONLY_FULL_GROUP_BY, STRICT_TRANS_TABLES , STRICT_TRANS_TABLES "));
+        assert_eq!("", v.normalize(""));
     }
 }
