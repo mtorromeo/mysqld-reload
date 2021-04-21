@@ -97,19 +97,28 @@ fn main() {
     };
     let vardef_path = Path::new(&outdir).join("mysql_system_vardef.rs");
     let mut vardef_file = fs::File::create(&vardef_path).unwrap();
-
-    println!("cargo:rerun-if-changed=server-system-variables.html");
+    let mut vardefs = Vec::new();
 
     let informal_tables_sel =
         Selector::parse("li.listitem > div.informaltable > table > tbody").unwrap();
-    let document = Html::parse_fragment(include_str!("server-system-variables.html"));
 
-    let mut vardefs = document
-        .select(&informal_tables_sel)
-        .filter_map(|e| VariableDefinition::try_from(e).ok())
-        .collect::<Vec<_>>();
+    for html in &[
+        "server-system-variables.html",
+        "replication-options-binary-log.html",
+    ] {
+        println!("cargo:rerun-if-changed={}", html);
+
+        let contents = fs::read_to_string(html).unwrap();
+        let document = Html::parse_fragment(&contents);
+
+        vardefs.extend(
+            document
+                .select(&informal_tables_sel)
+                .filter_map(|e| VariableDefinition::try_from(e).ok()),
+        );
+    }
+
     vardefs.sort_by(|a, b| a.name.cmp(&b.name));
-
     vardef_file
         .write_all(
             format!(
