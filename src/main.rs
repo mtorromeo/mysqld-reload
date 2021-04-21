@@ -50,14 +50,7 @@ impl Default for LoginSettings {
 
 fn read_login_mycnf(file: &Path) -> DynResult<LoginSettings> {
     let mycnf = read_mycnf(&file)?;
-
-    let mut login = LoginSettings {
-        user: None,
-        password: None,
-        host: None,
-        port: 3306,
-        socket: None,
-    };
+    let mut login = LoginSettings::default();
 
     let client_sections = ["mysql", "client"];
     for section in &client_sections {

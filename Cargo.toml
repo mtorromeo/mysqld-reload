@@ -1,6 +1,6 @@
 [package]
 name = "mysqld-reload"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Massimiliano Torromeo <massimiliano.torromeo@gmail.com>"]
 edition = "2018"
 description = "Reads the MySQL configuration files and applies the configured variables at runtime when their values don't match."

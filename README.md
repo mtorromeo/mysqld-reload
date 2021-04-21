@@ -13,7 +13,7 @@ You'll find the binary in `target/release/mysqld-reload`.
 ## Usage
 
 ```
-mysqld-reload 0.2.0
+mysqld-reload 0.2.1
 Massimiliano Torromeo <massimiliano.torromeo@gmail.com>
 Reads the MySQL configuration files and applies the configured variables at runtime when their values don't match.
 
