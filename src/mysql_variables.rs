@@ -54,6 +54,12 @@ impl VariableDefinition {
                     _ => value,
                 }
             }
+            VariableType::Numeric if !value.is_empty() => {
+                match value.parse::<f32>() {
+                    Ok(fvalue) => format!("{}", fvalue),
+                    _ => value,
+                }
+            }
             VariableType::Set => {
                 let set: HashSet<_> = value.split_terminator(',').map(|s| s.trim()).collect();
                 let mut v: Vec<_> = set.into_iter().collect();
@@ -107,6 +113,14 @@ mod test {
         assert_eq!("OFF", v.normalize("0"));
         assert_eq!("OFF", v.normalize("x"));
         assert_eq!("OFF", v.normalize("off"));
+    }
+
+    #[test]
+    fn test_normalize_numeric() {
+        let v = VariableDefinition::get("long_query_time").unwrap();
+        assert!(matches!(v.vartype, VariableType::Numeric));
+        assert_eq!("2", v.normalize("2.000000"));
+        assert_eq!("2.1", v.normalize("2.100000"));
     }
 
     #[test]
