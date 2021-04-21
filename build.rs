@@ -104,10 +104,11 @@ fn main() {
         Selector::parse("li.listitem > div.informaltable > table > tbody").unwrap();
     let document = Html::parse_fragment(include_str!("server-system-variables.html"));
 
-    let vardefs: Vec<VariableDefinition> = document
+    let mut vardefs = document
         .select(&informal_tables_sel)
         .filter_map(|e| VariableDefinition::try_from(e).ok())
-        .collect();
+        .collect::<Vec<_>>();
+    vardefs.sort_by(|a, b| a.name.cmp(&b.name));
 
     vardef_file
         .write_all(
