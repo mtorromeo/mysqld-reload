@@ -27,17 +27,66 @@ impl Variable {
 type DynResult<T> = Result<T, Box<dyn std::error::Error>>;
 type MyCnfSection = HashMap<String, Option<String>>;
 
-fn read_defaultscnf() -> DynResult<Option<HashMap<String, MyCnfSection>>> {
-    match dirs::home_dir() {
-        None => Ok(None),
-        Some(mut mycnf) => {
-            mycnf.push(".my.cnf");
-            if !mycnf.is_file() {
-                return Ok(None);
-            }
-            Ok(Some(read_mycnf(&mycnf)?))
+#[derive(Debug)]
+struct LoginSettings {
+    user: Option<String>,
+    password: Option<String>,
+    host: Option<String>,
+    port: u16,
+    socket: Option<String>,
+}
+
+impl Default for LoginSettings {
+    fn default() -> Self {
+        Self {
+            user: get_current_username().and_then(|u| u.into_string().ok()),
+            password: None,
+            host: None,
+            port: 3306,
+            socket: None,
         }
     }
+}
+
+fn read_login_mycnf(file: &Path) -> DynResult<LoginSettings> {
+    let mycnf = read_mycnf(&file)?;
+
+    let mut login = LoginSettings {
+        user: None,
+        password: None,
+        host: None,
+        port: 3306,
+        socket: None,
+    };
+
+    let client_sections = ["mysql", "client"];
+    for section in &client_sections {
+        if let Some(options) = mycnf.get(&section.to_string()) {
+            if let Some(Some(user)) = options.get("user") {
+                login.user = Some(user.clone());
+            }
+
+            if let Some(Some(pass)) = options.get("password") {
+                login.password = Some(pass.clone());
+            }
+
+            if let Some(Some(host)) = options.get("host") {
+                login.host = Some(host.clone());
+            }
+
+            if let Some(Some(port)) = options.get("port") {
+                if let Ok(port) = port.parse() {
+                    login.port = port;
+                }
+            }
+
+            if let Some(Some(socket)) = options.get("socket") {
+                login.socket = Some(socket.clone());
+            }
+        }
+    }
+
+    Ok(login)
 }
 
 fn read_mycnf(file: &Path) -> DynResult<HashMap<String, MyCnfSection>> {
@@ -47,7 +96,7 @@ fn read_mycnf(file: &Path) -> DynResult<HashMap<String, MyCnfSection>> {
 
     let mut ini = Ini::new();
     ini.read(s)?;
-    Ok(ini.get_map().expect("Config file was read"))
+    Ok(ini.get_map().unwrap_or_default())
 }
 
 fn normalize_conf(config: &HashMap<String, Option<String>>) -> HashMap<String, String> {
@@ -129,24 +178,30 @@ fn main() -> DynResult<()> {
 
     let config = normalize_conf(config);
 
-    let mut myopts = mysql::OptsBuilder::new();
-    if let Some(mycnf) = read_defaultscnf()? {
-        let client_sections = ["mysql", "client"];
-        for section in &client_sections {
-            if let Some(options) = mycnf.get(&section.to_string()) {
-                if let Some(user) = options
-                    .get("user")
-                    .and_then(|u| u.clone())
-                    .or_else(|| get_current_username().and_then(|u| u.into_string().ok()))
-                {
-                    myopts = myopts.user(Some(user));
-                }
-                if let Some(Some(pass)) = options.get("password") {
-                    myopts = myopts.pass(Some(pass));
-                }
-            }
+    let defaults_file = opts.defaults_file.or_else(|| {
+        dirs::home_dir().map(|mut home| {
+            home.push(".my.cnf");
+            home
+        })
+    });
+
+    let mycnf = match defaults_file {
+        Some(defaults_file) if !opts.no_defaults => {
+            read_login_mycnf(&defaults_file).unwrap_or_default()
         }
-    }
+        _ => LoginSettings::default(),
+    };
+
+    let myopts = mysql::OptsBuilder::new()
+        .user(opts.user.or(mycnf.user))
+        .pass(opts.password.or(mycnf.password))
+        .ip_or_hostname(opts.host.or(mycnf.host))
+        .tcp_port(opts.port.unwrap_or(mycnf.port))
+        .socket(
+            opts.socket
+                .map(|s| s.to_string_lossy().to_string())
+                .or(mycnf.socket),
+        );
 
     let mut conn = mysql::Conn::new(myopts)?;
     let mysqld_variables = conn.query_map("SHOW GLOBAL VARIABLES", |(name, value)| Variable {

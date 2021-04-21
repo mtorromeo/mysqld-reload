@@ -13,7 +13,7 @@ You'll find the binary in `target/release/mysqld-reload`.
 ## Usage
 
 ```
-mysqld-reload 0.1.0
+mysqld-reload 0.2.0
 Massimiliano Torromeo <massimiliano.torromeo@gmail.com>
 Reads the MySQL configuration files and applies the configured variables at runtime when their values don't match.
 
@@ -21,13 +21,20 @@ USAGE:
     mysqld-reload [FLAGS] [OPTIONS]
 
 FLAGS:
-    -d, --dry-run    Do not apply values
-    -h, --help       Prints help information
-    -V, --version    Prints version information
-    -v, --verbose    Print the SQL statements to stdout
+    -d, --dry-run        Do not apply values
+    -h, --help           Prints help information
+        --no-defaults    Don't read default options from any option file, except for login file
+    -V, --version        Prints version information
+    -v, --verbose        Print the SQL statements to stdout
 
 OPTIONS:
-    -c, --cnf <cnf>    MySQL server configuration file [default: /etc/my.cnf]
+    -c, --cnf <cnf>                        MySQL server configuration file [default: /etc/my.cnf]
+        --defaults-file <defaults-file>    Only read default options from the given file
+    -H, --host <host>                      Connect to host
+    -p, --password <password>              Password to use when connecting to server
+    -P, --port <port>                      Port number to use for connection
+    -S, --socket <socket>                  The socket file to use for connection
+    -u, --user <user>                      User for login if not current user
 ```
 
 ## Known issues
